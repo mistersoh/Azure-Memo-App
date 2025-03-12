@@ -1,0 +1,22 @@
+# Dependency directories
+node_modules/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# Distribution / packaging
+dist/
+build/
+out/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Electron specific
+.electron-builder.yml 

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Azure DevOps Configuration</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f8f8f8;
+      color: #333;
+    }
+    h3 {
+      margin-top: 0;
+      color: #0078d7;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #777;
+      margin-top: 3px;
+    }
+    button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #106ebe;
+    }
+    .message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .success {
+      background-color: #dff6dd;
+      color: #107c10;
+    }
+    .error {
+      background-color: #fde7e9;
+      color: #d83b01;
+    }
+  </style>
+</head>
+<body>
+  <h3>Azure DevOps Configuration</h3>
+  
+  <div class="form-group">
+    <label for="azureOrg">Organization Name</label>
+    <input type="text" id="azureOrg" placeholder="e.g., myorganization">
+    <div class="help-text">The name of your Azure DevOps organization</div>
+  </div>
+  
+  <div class="form-group">
+    <label for="project">Project Name</label>
+    <input type="text" id="project" placeholder="e.g., MyProject">
+    <div class="help-text">The name of your Azure DevOps project</div>
+  </div>
+  
+  <div class="form-group">
+    <label for="pat">Personal Access Token (PAT)</label>
+    <input type="password" id="pat" placeholder="Your PAT">
+    <div class="help-text">Your Azure DevOps personal access token with 'Work Items: Read & Write' permissions</div>
+  </div>
+  
+  <div class="form-group">
+    <label for="userName">Your Name (optional)</label>
+    <input type="text" id="userName" placeholder="e.g., user@example.com">
+    <div class="help-text">Your Azure DevOps username to assign work items to</div>
+  </div>
+  
+  <button id="save-config">Save Configuration</button>
+  
+  <div id="message" class="message" style="display: none;"></div>
+  
+  <script src="config.js"></script>
+</body>
+</html> 

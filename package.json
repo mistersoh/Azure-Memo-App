@@ -1,0 +1,48 @@
+{
+  "name": "azure-memo-app",
+  "version": "1.0.0",
+  "description": "Simple memo app for Azure DevOps",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^25.3.1",
+    "electron-builder": "^24.6.3"
+  },
+  "build": {
+    "appId": "com.yourname.azurememoapp",
+    "productName": "Azure DevOps Memo",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/.{idea,git,gitignore,gitattributes}",
+      "!**/{.DS_Store,.Spotlight-V100,.Trashes}"
+    ]
+  },
+  "author": "",
+  "license": "MIT"
+} 
