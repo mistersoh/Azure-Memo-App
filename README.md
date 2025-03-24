@@ -6,6 +6,7 @@ A simple desktop sticky note application that allows you to quickly create tasks
 
 - Create tasks and bugs directly in Azure DevOps
 - Create Epics, Features, and User Stories on the fly
+- Sync work items with Notion databases 
 - Simple, sticky-note style interface
 - Stays on top of other windows for easy access
 - Secure storage of Azure DevOps credentials
@@ -38,6 +39,7 @@ A simple desktop sticky note application that allows you to quickly create tasks
    - Your project name
    - Your personal access token (PAT)
    - Your Azure DevOps username (for task assignment)
+   - (Optional) Your Notion API key and database ID for Notion integration
 
 ## Creating a Personal Access Token (PAT)
 
@@ -66,7 +68,8 @@ To use this application, you need to create a Personal Access Token in Azure Dev
 4. Select the work item type (Task or Bug)
 5. Select an Area Path (optional) to categorize the work item
 6. Select an Iteration/Sprint (optional) to plan when the work should be done
-7. Click "Send"
+7. Check "Add to Notion" if you want to sync this item to Notion (requires Notion setup)
+8. Click "Send"
 
 The work item will be created in your Azure DevOps project, assigned to you, linked to the selected parent work item, placed in the specified Area Path, and scheduled for the selected Iteration. You'll see a confirmation message when it's complete.
 
@@ -82,6 +85,24 @@ If you need to create a new Epic, Feature, or User Story to organize your work:
 The new work item will be created in Azure DevOps and automatically selected in the dropdown. You can then create tasks or bugs under it.
 
 Features can only be created when an Epic is selected, and User Stories can only be created when a Feature is selected.
+
+## Setting Up Notion Integration
+
+This app supports syncing work items to a Notion database. To set this up:
+
+1. Click the "N" button in the bottom left of the app
+2. Follow the instructions to create a Notion integration and get your API key
+3. Create a database in Notion with these properties:
+   - Title (title property)
+   - Type (select property)
+   - Status (status property)
+   - Azure ID (number property)
+   - URL (url property)
+4. Share your database with the integration (click "Share" in the Notion database)
+5. Copy your database ID from the URL and paste it into the app's Notion configuration
+6. Once configured, you can check "Add to Notion" when creating work items
+
+The app will create a new page in your Notion database for each work item with the appropriate properties and content.
 
 ## Note on Work Item Hierarchy
 

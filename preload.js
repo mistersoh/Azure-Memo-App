@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld(
     fetchAreaPaths: () => ipcRenderer.invoke('fetch-area-paths'),
     
     // Fetch iterations
-    fetchIterations: () => ipcRenderer.invoke('fetch-iterations')
+    fetchIterations: () => ipcRenderer.invoke('fetch-iterations'),
+    
+    // Notion integration methods
+    checkNotionConfig: () => ipcRenderer.invoke('check-notion-config'),
+    getNotionConfig: () => ipcRenderer.invoke('get-notion-config'),
+    saveNotionConfig: (config) => ipcRenderer.invoke('save-notion-config', config),
+    showNotionConfigDialog: () => ipcRenderer.invoke('show-notion-config-dialog'),
+    addToNotion: (workItem) => ipcRenderer.invoke('add-to-notion', workItem)
   }
 ); 

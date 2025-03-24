@@ -2,17 +2,19 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const axios = require('axios');
 const Store = require('electron-store');
+const notionIntegration = require('./notion-integration');
 
 // Create a store for saving configuration
 const store = new Store();
 
 let mainWindow;
+let notionConfigWindow;
 
 function createWindow() {
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 700,
+    height: 750,
     resizable: false,
     alwaysOnTop: true,
     frame: true,
@@ -330,10 +332,16 @@ ipcMain.handle('create-work-item', async (event, data) => {
       }
     );
     
+    // Generate the URL to view the work item
+    const workItemUrl = `https://dev.azure.com/${azureOrg}/${project}/_workitems/edit/${response.data.id}`;
+    
+    console.log('Created work item with URL:', workItemUrl);
+    
     return { 
       success: true, 
       message: `${data.type} created successfully!`,
       id: response.data.id,
+      url: workItemUrl,
       title: data.title
     };
   } catch (error) {
@@ -356,26 +364,161 @@ ipcMain.handle('send-work-item', async (event, data) => {
   return await ipcMain.handle('create-work-item', event, newData);
 });
 
-// Show configuration dialog
+// Show Azure DevOps configuration dialog
 ipcMain.handle('show-config-dialog', async () => {
-  return new Promise((resolve) => {
-    const configWindow = new BrowserWindow({
-      width: 400,
-      height: 450,
-      parent: mainWindow,
-      modal: true,
-      resizable: false,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true
-      }
-    });
-
-    configWindow.loadFile('config.html');
-    configWindow.setMenuBarVisibility(false);
-
-    configWindow.on('closed', () => {
-      resolve(true);
-    });
+  // Create the config window
+  const configWindow = new BrowserWindow({
+    width: 400,
+    height: 550,
+    resizable: false,
+    parent: mainWindow,
+    modal: true,
+    icon: path.join(__dirname, 'icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      enableRemoteModule: false
+    }
   });
+  
+  // Load the config.html file
+  configWindow.loadFile('config.html');
+  
+  // Disable menu bar for cleaner interface
+  configWindow.setMenuBarVisibility(false);
+  
+  // Show the window
+  configWindow.show();
+});
+
+// Show Notion configuration dialog
+ipcMain.handle('show-notion-config-dialog', async () => {
+  // Create the config window
+  notionConfigWindow = new BrowserWindow({
+    width: 450,
+    height: 600,
+    resizable: false,
+    parent: mainWindow,
+    modal: true,
+    icon: path.join(__dirname, 'icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      enableRemoteModule: false
+    }
+  });
+  
+  // Load the notion-config.html file
+  notionConfigWindow.loadFile('notion-config.html');
+  
+  // Disable menu bar for cleaner interface
+  notionConfigWindow.setMenuBarVisibility(false);
+  
+  // Show the window
+  notionConfigWindow.show();
+});
+
+// Check if Notion configuration exists
+ipcMain.handle('check-notion-config', async () => {
+  const config = {
+    apiKey: store.get('notionApiKey'),
+    databaseId: store.get('notionDatabaseId')
+  };
+  
+  return config.apiKey && config.databaseId;
+});
+
+// Get Notion configuration
+ipcMain.handle('get-notion-config', async () => {
+  return {
+    apiKey: store.get('notionApiKey'),
+    databaseId: store.get('notionDatabaseId')
+  };
+});
+
+// Save Notion configuration
+ipcMain.handle('save-notion-config', async (event, config) => {
+  try {
+    // Initialize Notion client with the provided API key
+    const client = notionIntegration.initClient(config.apiKey);
+    
+    // Just test the connection by retrieving the database - don't validate schema properties
+    // This makes it more flexible for databases with different property names
+    try {
+      await notionIntegration.getDatabaseSchema(client, config.databaseId);
+    } catch (err) {
+      // If there's an error, it's likely due to permissions or invalid database ID
+      return { 
+        success: false, 
+        message: `Error: Cannot access database. Make sure the database ID is correct and the integration has been given access to the database.`
+      };
+    }
+    
+    // If we get here, the connection was successful
+    store.set('notionApiKey', config.apiKey);
+    store.set('notionDatabaseId', config.databaseId);
+    
+    return { success: true, message: 'Notion configuration saved successfully' };
+  } catch (error) {
+    console.error('Error testing Notion connection:', error);
+    return { 
+      success: false, 
+      message: `Error: ${error.message || 'Could not connect to Notion with provided credentials'}`
+    };
+  }
+});
+
+// Add work item to Notion
+ipcMain.handle('add-to-notion', async (event, workItemData) => {
+  try {
+    // Get notion config
+    const notionApiKey = store.get('notionApiKey');
+    const notionDatabaseId = store.get('notionDatabaseId');
+    const userName = store.get('userName'); // Get Azure user name for Assignee
+    
+    if (!notionApiKey || !notionDatabaseId) {
+      return { success: false, message: 'Notion configuration is incomplete' };
+    }
+    
+    // Ensure we have a valid URL from Azure DevOps
+    if (!workItemData.url) {
+      console.warn('No URL provided from Azure DevOps');
+    } else {
+      console.log('Received URL from Azure DevOps:', workItemData.url);
+    }
+    
+    // Log the work item data for debugging
+    console.log('Adding to Notion with data:', {
+      title: workItemData.title,
+      type: workItemData.type,
+      azureId: workItemData.id,
+      url: workItemData.url,
+      assignee: userName
+    });
+    
+    // Initialize Notion client
+    const client = notionIntegration.initClient(notionApiKey);
+    
+    // Add the work item to Notion
+    const result = await notionIntegration.addItemToNotion(
+      client, 
+      notionDatabaseId, 
+      {
+        title: workItemData.title,
+        type: workItemData.type,
+        description: workItemData.content,
+        azureId: workItemData.id,
+        url: workItemData.url,
+        assignee: userName // Pass the Azure username as the Assignee
+      }
+    );
+    
+    return { success: true, notionPage: result };
+  } catch (error) {
+    console.error('Error adding to Notion:', error);
+    return { 
+      success: false, 
+      message: `Error: ${error.message || 'Failed to add item to Notion'}`
+    };
+  }
 }); 

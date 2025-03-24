@@ -83,6 +83,14 @@
     #config-btn:hover {
       background-color: #e1e1e1;
     }
+    #notion-config-btn {
+      background-color: #f0f0f0;
+      color: #333;
+      font-size: 18px;
+    }
+    #notion-config-btn:hover {
+      background-color: #e1e1e1;
+    }
     .status-bar {
       margin-top: 10px;
       text-align: center;
@@ -129,6 +137,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+    .config-buttons {
+      display: flex;
+      gap: 5px;
     }
     .work-item-details {
       display: flex;
@@ -221,6 +233,18 @@
     .cancel-btn:hover {
       background-color: #b32d01;
     }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-top: 5px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 5px;
+    }
+    .checkbox-group label {
+      font-size: 12px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
@@ -297,10 +321,18 @@
           <option value="">-- Default Iteration --</option>
         </select>
       </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="add-to-notion-check" disabled>
+        <label for="add-to-notion-check">Add to Notion</label>
+      </div>
     </div>
     
     <div class="bottom-buttons">
-      <button id="config-btn">⚙️</button>
+      <div class="config-buttons">
+        <button id="config-btn" title="Azure DevOps Settings">⚙️</button>
+        <button id="notion-config-btn" title="Notion Settings">N</button>
+      </div>
       <button id="send-btn">Send</button>
     </div>
     

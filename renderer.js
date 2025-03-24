@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const addFeatureBtn = document.getElementById('add-feature-btn');
   const addUserStoryBtn = document.getElementById('add-user-story-btn');
   
+  // Add Notion button and checkbox
+  const notionConfigBtn = document.getElementById('notion-config-btn');
+  const addToNotionCheck = document.getElementById('add-to-notion-check');
+  
   // Modal elements
   const createWorkItemModal = document.getElementById('create-work-item-modal');
   const modalTitle = document.getElementById('modal-title');
@@ -43,6 +47,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Variables for the create work item modal
   let currentWorkItemType = '';
   let currentParentId = null;
+  
+  // Notion configuration status
+  let isNotionConfigured = false;
 
   // Custom validation function to replace alert
   function showValidationError(message, inputField) {
@@ -84,6 +91,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadIterations(),
       loadEpics()
     ]);
+    
+    // Check Notion configuration
+    checkNotionConfig();
   } else {
     // Show configuration required
     configRequiredDiv.style.display = 'block';
@@ -150,66 +160,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     selectedUserStoryId = userStorySelect.value;
   });
 
-  // Open configuration dialog when 'Configure' button is clicked
-  configureBtn.addEventListener('click', openConfigDialog);
-  configBtn.addEventListener('click', openConfigDialog);
+  // Notion configuration button event listener
+  if (notionConfigBtn) {
+    notionConfigBtn.addEventListener('click', openNotionConfigDialog);
+  }
 
-  // Send button click event
+  // Configure button event listener
+  configureBtn.addEventListener('click', openConfigDialog);
+  
+  // Config button event listener
+  configBtn.addEventListener('click', openConfigDialog);
+  
+  // Send button event listener
   sendBtn.addEventListener('click', async () => {
-    // Validate input
+    // Validate inputs
     if (!titleInput.value.trim()) {
-      showValidationError('Please enter a title for the work item', titleInput);
+      showValidationError('Please enter a title', titleInput);
       return;
     }
-
-    // Update status
-    statusDiv.textContent = 'Sending...';
-    statusDiv.style.color = '';
+    
+    // Disable send button and title input to prevent double-click
     sendBtn.disabled = true;
-
+    titleInput.disabled = true;
+    
+    // Set status
+    statusDiv.textContent = 'Sending work item...';
+    statusDiv.style.color = '';
+    
+    // Try to send the work item
     try {
-      // Determine parent ID (use the most specific one selected)
-      const parentId = selectedUserStoryId || selectedFeatureId || selectedEpicId || null;
-
-      // Send work item to Azure DevOps
-      const result = await window.api.createWorkItem({
+      const workItemData = {
         title: titleInput.value.trim(),
-        description: contentTextarea.value.trim(),
+        content: contentTextarea.value.trim(),
         type: typeSelect.value,
-        parentId: parentId,
-        areaPath: selectedAreaPath,
-        iterationPath: selectedIteration,
-        assignToSelf: true // Always assign tasks/bugs to self
-      });
-
+        parentId: selectedUserStoryId || selectedFeatureId || selectedEpicId || null,
+        areaPath: areaPathSelect.value,
+        iterationPath: iterationSelect.value,
+        assignToSelf: true // Auto-assign the task to the current user
+      };
+      
+      // Send the work item to Azure DevOps
+      const result = await window.api.createWorkItem(workItemData);
+      
+      // Check if work item was successfully created
       if (result.success) {
         // Show success message
         statusDiv.textContent = result.message;
         statusDiv.style.color = '#107c10';
         
-        // Clear form
+        // Add to Notion if checkbox is checked and Notion is configured
+        if (addToNotionCheck && addToNotionCheck.checked && isNotionConfigured) {
+          try {
+            statusDiv.textContent = 'Adding to Notion...';
+            const notionResult = await window.api.addToNotion({
+              title: workItemData.title,
+              content: workItemData.content,
+              type: workItemData.type,
+              id: result.id,
+              url: result.url
+            });
+            
+            if (notionResult.success) {
+              statusDiv.textContent = 'Work item created and added to Notion';
+            } else {
+              statusDiv.textContent = `Work item created, but failed to add to Notion: ${notionResult.message}`;
+              statusDiv.style.color = '#d83b01';
+            }
+          } catch (notionError) {
+            console.error('Notion error:', notionError);
+            statusDiv.textContent = `Work item created, but error adding to Notion: ${notionError.message}`;
+            statusDiv.style.color = '#d83b01';
+          }
+        }
+        
+        // Clear inputs
         titleInput.value = '';
         contentTextarea.value = '';
         
-        // Reset after 3 seconds
+        // Reset status after 3 seconds
         setTimeout(() => {
-          window.api.getConfig().then(config => {
-            statusDiv.textContent = `Ready for ${config.azureOrg}/${config.project}`;
-            statusDiv.style.color = '';
-          });
+          statusDiv.textContent = `Ready for ${orgProjectSpan.textContent}`;
+          statusDiv.style.color = '';
         }, 3000);
       } else {
         // Show error message
-        statusDiv.textContent = result.message;
+        statusDiv.textContent = result.message || 'Failed to create work item';
         statusDiv.style.color = '#d83b01';
       }
     } catch (error) {
       // Show error message
-      statusDiv.textContent = 'Error: ' + error.message;
+      console.error('Error sending work item:', error);
+      statusDiv.textContent = 'Error: ' + (error.message || 'Failed to send work item');
       statusDiv.style.color = '#d83b01';
     } finally {
-      // Enable send button
+      // Re-enable send button and title input
       sendBtn.disabled = false;
+      titleInput.disabled = false;
+      titleInput.focus();
     }
   });
   
@@ -565,6 +612,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `${config.azureOrg}/${config.project}`;
   }
 
+  // Function to check if Notion is configured
+  async function checkNotionConfig() {
+    try {
+      isNotionConfigured = await window.api.checkNotionConfig();
+      
+      // Update UI to reflect Notion configuration status
+      if (addToNotionCheck) {
+        addToNotionCheck.disabled = !isNotionConfigured;
+        if (!isNotionConfigured) {
+          addToNotionCheck.checked = false;
+          addToNotionCheck.title = 'Configure Notion integration first';
+        } else {
+          addToNotionCheck.title = 'Add this work item to Notion';
+        }
+      }
+      
+      if (notionConfigBtn) {
+        notionConfigBtn.title = isNotionConfigured ? 'Update Notion configuration' : 'Set up Notion integration';
+      }
+    } catch (error) {
+      console.error('Error checking Notion config:', error);
+    }
+  }
+  
+  // Function to open Notion configuration dialog
+  async function openNotionConfigDialog() {
+    await window.api.showNotionConfigDialog();
+    
+    // Check Notion configuration again
+    await checkNotionConfig();
+  }
+
   // Function to open configuration dialog
   async function openConfigDialog() {
     await window.api.showConfigDialog();
@@ -589,6 +668,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadIterations(),
         loadEpics()
       ]);
+      
+      // Check Notion configuration
+      checkNotionConfig();
     } else {
       // Show configuration required
       configRequiredDiv.style.display = 'block';

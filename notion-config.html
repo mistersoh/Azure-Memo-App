@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Notion Configuration</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f8f8f8;
+      color: #333;
+    }
+    h3 {
+      margin-top: 0;
+      color: #0078d7;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #777;
+      margin-top: 3px;
+    }
+    button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #106ebe;
+    }
+    .message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .success {
+      background-color: #dff6dd;
+      color: #107c10;
+    }
+    .error {
+      background-color: #fde7e9;
+      color: #d83b01;
+    }
+    .steps {
+      background-color: #f0f6ff;
+      border: 1px solid #d0e2ff;
+      border-radius: 4px;
+      padding: 10px 15px;
+      margin-bottom: 20px;
+    }
+    .steps h4 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #0078d7;
+    }
+    .steps ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .steps li {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h3>Notion Integration Setup</h3>
+  
+  <div class="steps">
+    <h4>How to Set Up Notion Integration</h4>
+    <ol>
+      <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank">Notion's Integrations page</a></li>
+      <li>Click "New integration" and give it a name (e.g., "Azure DevOps Memo")</li>
+      <li>Select the workspace you want to integrate with</li>
+      <li>Copy the "Internal Integration Token" and paste it below</li>
+      <li>Find your database ID from the URL of your Notion database<br>
+         (e.g., https://www.notion.so/workspace/12345678abcdef1234567890abcdef12?v=...)<br>
+         The ID is the part after the workspace name and before the ?v=</li>
+      <li>Make sure to share your database with the integration (click "Share" in Notion)</li>
+    </ol>
+  </div>
+  
+  <div class="form-group">
+    <label for="apiKey">Notion API Key</label>
+    <input type="password" id="apiKey" placeholder="secret_...">
+    <div class="help-text">Your Notion Internal Integration Token</div>
+  </div>
+  
+  <div class="form-group">
+    <label for="notionUrl">Notion Database URL (Optional)</label>
+    <input type="text" id="notionUrl" placeholder="https://www.notion.so/workspace/databaseID?v=...">
+    <div class="help-text">Paste your full Notion database URL and we'll extract the ID</div>
+  </div>
+  
+  <div class="form-group">
+    <label for="databaseId">Database ID</label>
+    <input type="text" id="databaseId" placeholder="12345678abcdef1234567890abcdef12">
+    <div class="help-text">The ID of your Notion database (filled automatically if URL is provided)</div>
+  </div>
+  
+  <button id="save-config">Save Configuration</button>
+  
+  <div id="message" class="message" style="display: none;"></div>
+  
+  <script>
+    // Wait for DOM to load
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Get UI elements
+      const apiKeyInput = document.getElementById('apiKey');
+      const notionUrlInput = document.getElementById('notionUrl');
+      const databaseIdInput = document.getElementById('databaseId');
+      const saveConfigButton = document.getElementById('save-config');
+      const messageDiv = document.getElementById('message');
+  
+      // Extract database ID from URL when URL field changes
+      notionUrlInput.addEventListener('input', () => {
+        const url = notionUrlInput.value.trim();
+        if (url) {
+          try {
+            // Extract database ID from URL using regex
+            // Handle multiple URL formats:
+            // - https://www.notion.so/workspace-name/databaseID?v=...
+            // - https://www.notion.so/databaseID?v=...
+            const regex = /\/([0-9a-f]{32})[?]/i;
+            const match = url.match(regex);
+            
+            if (match && match[1]) {
+              databaseIdInput.value = match[1];
+            }
+          } catch (error) {
+            console.error('Error extracting database ID:', error);
+          }
+        }
+      });
+  
+      // Load existing configuration if available
+      try {
+        const config = await window.api.getNotionConfig();
+        if (config) {
+          apiKeyInput.value = config.apiKey || '';
+          databaseIdInput.value = config.databaseId || '';
+        }
+      } catch (error) {
+        showMessage('Error loading configuration', false);
+      }
+  
+      // Save configuration when save button is clicked
+      saveConfigButton.addEventListener('click', async () => {
+        // Validate input
+        if (!apiKeyInput.value.trim()) {
+          showMessage('Please enter your Notion API key', false);
+          apiKeyInput.focus();
+          return;
+        }
+  
+        if (!databaseIdInput.value.trim()) {
+          showMessage('Please enter your Notion database ID', false);
+          databaseIdInput.focus();
+          return;
+        }
+  
+        // Save configuration
+        try {
+          saveConfigButton.disabled = true;
+          saveConfigButton.textContent = 'Testing connection...';
+          
+          const result = await window.api.saveNotionConfig({
+            apiKey: apiKeyInput.value.trim(),
+            databaseId: databaseIdInput.value.trim()
+          });
+  
+          if (result.success) {
+            // Show success message
+            showMessage('Notion configuration saved successfully', true);
+            
+            // Close window after a short delay
+            setTimeout(() => {
+              window.close();
+            }, 1500);
+          } else {
+            showMessage(`Error: ${result.message}`, false);
+            saveConfigButton.disabled = false;
+            saveConfigButton.textContent = 'Save Configuration';
+          }
+        } catch (error) {
+          showMessage('Error saving configuration: ' + error.message, false);
+          saveConfigButton.disabled = false;
+          saveConfigButton.textContent = 'Save Configuration';
+        }
+      });
+  
+      // Function to show message
+      function showMessage(text, isSuccess) {
+        messageDiv.textContent = text;
+        messageDiv.className = 'message ' + (isSuccess ? 'success' : 'error');
+        messageDiv.style.display = 'block';
+        
+        // Hide message after 5 seconds if it's a success
+        if (isSuccess) {
+          setTimeout(() => {
+            messageDiv.style.display = 'none';
+          }, 5000);
+        }
+      }
+    });
+  </script>
+</body>
+</html> 

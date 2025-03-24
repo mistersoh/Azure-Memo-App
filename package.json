@@ -9,6 +9,7 @@
     "pack": "electron-builder --dir"
   },
   "dependencies": {
+    "@notionhq/client": "^2.3.0",
     "axios": "^1.6.0",
     "electron-store": "^8.1.0"
   },
@@ -45,4 +46,4 @@
   },
   "author": "",
   "license": "MIT"
-} 
+}
